@@ -178,6 +178,7 @@
   </label>
   <button class="ghost" id="btnActualizar">Actualizar datos</button>
   <button class="ghost" id="btnOtro">Cargar otros ficheros</button>
+  <span id="fuenteDatos" style="font:600 11px 'Barlow',sans-serif;"></span>
   <span id="estado"></span>
 </div>
 
@@ -631,6 +632,35 @@ var MODS  = null;   // modificaciones pendientes de aplicar
 var MODIFICADAS = {};  // centro -> nº de dias cambiados (o 'nueva')
 var LISTA = [];     // codigos ordenados
 
+// De donde vienen los datos que se están mostrando ahora mismo, y cuándo
+// se consiguieron. 'sheets' = en vivo, 'cache' = copia local de respaldo,
+// 'manual' = CSV subido a mano.
+var FUENTE = { origen: null, fecha: null };
+
+function setFuente(origen, fecha){
+  FUENTE.origen = origen;
+  FUENTE.fecha = fecha;
+  pintarFuente();
+}
+
+function pintarFuente(){
+  var e = $('fuenteDatos');
+  if (!e || !FUENTE.origen) return;
+  var fechaTxt = FUENTE.fecha
+    ? FUENTE.fecha.toLocaleString('es-ES', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })
+    : '—';
+  if (FUENTE.origen === 'sheets'){
+    e.textContent = '● En vivo desde Sheets · ' + fechaTxt;
+    e.style.color = '#8FBF9F';
+  } else if (FUENTE.origen === 'cache'){
+    e.textContent = '● Copia local, sin conexión · ' + fechaTxt;
+    e.style.color = '#E8B84B';
+  } else {
+    e.textContent = '● Cargado a mano · ' + fechaTxt;
+    e.style.color = '#CFE4D6';
+  }
+}
+
 var $ = function(id){ return document.getElementById(id); };
 
 /* --- Sheet de origen: mismo documento donde Pepa vuelca el export de
@@ -1008,7 +1038,10 @@ function mostrarCalendarios(){
   pintar();
 }
 
-$('btnVer').addEventListener('click', mostrarCalendarios);
+$('btnVer').addEventListener('click', function(){
+  setFuente('manual', new Date());
+  mostrarCalendarios();
+});
 
 /* --- Arranque automático: lee las 3 pestañas del Sheet directamente.
    Si algo falla (sin red, Sheet no accesible, etc.), cae a la última
@@ -1039,12 +1072,16 @@ function autoInit(){
     if (okOferta){
       dbSet(CACHE.fecha, new Date().toISOString());
       comprobarListo();
+      setFuente('sheets', new Date());
       mostrarCalendarios();
     } else {
       $('cargandoMsg').textContent = 'No se ha podido conectar con Google Sheets. Buscando una copia guardada…';
       cargarDesdeCache().then(function(){
         if (DATOS){
-          mostrarCalendarios();
+          return dbGet(CACHE.fecha).then(function(f){
+            setFuente('cache', f ? new Date(f) : null);
+            mostrarCalendarios();
+          });
         } else {
           $('cargando').style.display = 'none';
           $('manual').style.display = 'block';
@@ -1081,6 +1118,7 @@ $('btnActualizar').addEventListener('click', function(){
       try { MODS = parseOferta(modsTxt); guardarEnCache(CACHE.mods, modsTxt); } catch (ex){}
     }
     dbSet(CACHE.fecha, new Date().toISOString());
+    setFuente('sheets', new Date());
 
     aplicarMods();
     LISTA = Object.keys(DATOS.stores).sort(function(a,b){
