@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Consulta de Planificación Anual NTC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: #e9ecef; color: #1f2937; font-family: 'Barlow', system-ui, sans-serif; }
+
+  /* ---------- Geometria de impresion: A4 apaisado ---------- */
+  @page { size: A4 landscape; margin: 0; }
+  .page {
+    width: 297mm; height: 210mm; padding: 4mm 9mm; background: #fff;
+    display: flex; flex-direction: column; overflow: hidden;
+    page-break-after: always; break-after: page;
+  }
+  .page:last-child { page-break-after: auto; break-after: auto; }
+
+  @media screen {
+    #doc { display: flex; flex-direction: column; align-items: flex-start;
+           width: max-content; margin: 0 auto; gap: 18px; padding: 18px; }
+    .page { box-shadow: 0 6px 24px rgba(0,0,0,.16); border-radius: 2px; }
+  }
+
+  /* ---------- Barra superior ---------- */
+  #bar {
+    position: sticky; top: 0; z-index: 50; background: #14261c;
+    color: #fff; padding: 11px 18px; display: flex; align-items: center;
+    gap: 16px; flex-wrap: wrap; box-shadow: 0 2px 10px rgba(0,0,0,.2);
+  }
+  #bar .brand { font: 800 13px 'Archivo', sans-serif; letter-spacing: .4px; }
+  #bar .sub { font: 600 10px 'Archivo', sans-serif; letter-spacing: 1.1px;
+              color: #8FBF9F; text-transform: uppercase; }
+  #bar input, #bar select {
+    font: 600 13px 'Barlow', sans-serif; padding: 6px 10px;
+    border-radius: 6px; border: 1px solid #2E4636; background: #fff; color: #1f2937;
+  }
+  #bar input { width: 210px; }
+  #bar select { max-width: 430px; }
+  #bar button {
+    font: 700 12px 'Archivo', sans-serif; letter-spacing: .3px; cursor: pointer;
+    padding: 7px 14px; border-radius: 6px; border: 0;
+    background: #2F9E5B; color: #fff;
+  }
+  #bar button:hover { background: #268049; }
+  #bar button.ghost { background: transparent; border: 1px solid #43604C; color: #CFE4D6; }
+  #bar button.ghost:hover { background: #1D3326; }
+  #estado { font: 500 11.5px 'Barlow', sans-serif; color: #9FBCA9; }
+
+  /* ---------- Pantalla de carga ---------- */
+  #inicio { max-width: 720px; margin: 44px auto; padding: 0 20px; }
+  #inicio h1 { font: 800 26px 'Archivo', sans-serif; margin: 0 0 6px; color: #14261c; }
+  #inicio p.lead { font: 400 14px 'Barlow', sans-serif; color: #5b6570;
+                   line-height: 1.55; margin: 0 0 26px; }
+  .zona {
+    border: 2px dashed #B6C2BA; border-radius: 12px; background: #fff;
+    padding: 20px 22px; margin-bottom: 14px; transition: border-color .15s, background .15s;
+  }
+  .zona.drag { border-color: #2F9E5B; background: #F2FBF5; }
+  .zona.ok { border-style: solid; border-color: #2F9E5B; background: #F6FBF8; }
+  .zona h3 { font: 700 13px 'Archivo', sans-serif; margin: 0 0 3px; color: #14261c; }
+  .zona .hint { font: 400 12px 'Barlow', sans-serif; color: #6b7280; line-height: 1.5; margin: 0 0 11px; }
+  .zona .estado { font: 600 12px 'Barlow', sans-serif; color: #2F9E5B; margin-top: 9px; }
+  .zona .estado.err { color: #B4443F; }
+  .zona label.file {
+    display: inline-block; cursor: pointer; font: 700 12px 'Archivo', sans-serif;
+    background: #14261c; color: #fff; padding: 8px 15px; border-radius: 6px;
+  }
+  .zona label.file:hover { background: #24402F; }
+  .zona input[type=file] { display: none; }
+  .zona a.drive {
+    display: inline-block; cursor: pointer; font: 700 12px 'Archivo', sans-serif;
+    background: #fff; color: #14261c; padding: 8px 15px; border-radius: 6px;
+    border: 1px solid #B6C2BA; text-decoration: none; margin-left: 8px;
+  }
+  .zona a.drive:hover { background: #F2FBF5; border-color: #2F9E5B; }
+  #btnVer {
+    width: 100%; font: 800 15px 'Archivo', sans-serif; padding: 14px;
+    border: 0; border-radius: 10px; background: #2F9E5B; color: #fff; cursor: pointer;
+    margin-top: 6px;
+  }
+  #btnVer:disabled { background: #C3CCC7; cursor: not-allowed; }
+  #aviso { font: 400 11.5px 'Barlow', sans-serif; color: #8A949C;
+           line-height: 1.5; margin-top: 16px; }
+
+  /* ---------- Pantalla de carga automática ---------- */
+  .spinner {
+    width: 34px; height: 34px; border: 4px solid #E3E8E5; border-top-color: #2F9E5B;
+    border-radius: 50%; margin: 0 auto; animation: girar .8s linear infinite;
+  }
+  @keyframes girar { to { transform: rotate(360deg); } }
+  #cargando { text-align: center; padding: 46px 0 20px; }
+  #cargandoMsg { font: 500 13.5px 'Barlow', sans-serif; color: #5b6570; margin-top: 16px; }
+  #verManual { font: 600 12px 'Archivo', sans-serif; color: #2F9E5B; text-decoration: none; }
+  #verManual:hover { text-decoration: underline; }
+
+  /* ---------- Impresion y exportacion a PDF ---------- */
+  /* print-color-adjust obliga al navegador a imprimir los fondos de
+     color; sin esto el calendario sale en blanco. */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+  @media print {
+    html, body { background: #fff !important; }
+    #bar, #inicio { display: none !important; }
+    #doc { display: block !important; padding: 0 !important; margin: 0 !important;
+           width: auto !important; gap: 0 !important; }
+    .page { box-shadow: none !important; border-radius: 0 !important;
+            margin: 0 !important; }
+  }
+</style>
+</head>
+<body>
+
+<div id="inicio">
+  <div class="sub" style="font:700 10px 'Archivo',sans-serif;letter-spacing:1.4px;color:#2F9E5B;text-transform:uppercase;margin-bottom:7px;">Dpto. Tiendas, RRHH y RREE &middot; Divprofi</div>
+  <h1>Consulta de Planificación Anual NTC</h1>
+
+  <div id="cargando">
+    <div class="spinner"></div>
+    <p id="cargandoMsg">Cargando datos desde Google Sheets…</p>
+    <p style="margin-top:18px;"><a href="#" id="verManual">¿Prefieres cargar los ficheros a mano?</a></p>
+  </div>
+
+  <div id="manual" style="display:none;">
+    <p class="lead">Carga el CSV de la oferta y podrás consultar el calendario de cualquier tienda en pantalla, o guardarlo en PDF. El maestro de tiendas y las modificaciones son opcionales. Los datos no salen de este equipo: todo se procesa en el navegador.</p>
+
+    <div class="zona" id="z1">
+      <h3>1. Oferta del año</h3>
+      <p class="hint">El CSV con la oferta de todas las tiendas. Arrastra el archivo aquí o púlsalo para buscarlo.</p>
+      <label class="file">Elegir archivo<input type="file" id="f1" accept=".csv,text/csv"></label>
+      <a class="drive" href="https://docs.google.com/spreadsheets/d/16-h2Cs0L7eOu5WBPS02-dVW42-O_6YQVBNMa9_0rh5A/export?format=csv&gid=0" download>Descargar CSV</a>
+      <a class="drive" href="https://docs.google.com/spreadsheets/d/16-h2Cs0L7eOu5WBPS02-dVW42-O_6YQVBNMa9_0rh5A/edit?gid=0#gid=0" target="_blank" rel="noopener">Abrir en Drive</a>
+      <div class="estado" id="e1"></div>
+    </div>
+
+    <div class="zona" id="z2">
+      <h3>2. Maestro de tiendas <span style="font-weight:400;color:#8A949C;">(opcional)</span></h3>
+      <p class="hint">Da la denominación, población, provincia y zona de la cabecera. Si no lo cargas, esos datos saldrán con un guion.</p>
+      <label class="file">Elegir archivo<input type="file" id="f2" accept=".csv,text/csv"></label>
+      <a class="drive" href="https://docs.google.com/spreadsheets/d/16-h2Cs0L7eOu5WBPS02-dVW42-O_6YQVBNMa9_0rh5A/export?format=csv&gid=1033958494" download>Descargar CSV</a>
+      <div class="estado" id="e2"></div>
+    </div>
+
+    <div class="zona" id="z3">
+      <h3>3. Modificaciones <span style="font-weight:400;color:#8A949C;">(opcional)</span></h3>
+      <p class="hint">Si te pasan cambios de una o varias tiendas, cárgalos aquí. Mismo formato que la oferta, pero solo con las tiendas y los días que cambian: machacan los datos iniciales día a día.</p>
+      <label class="file">Elegir archivo<input type="file" id="f3" accept=".csv,text/csv"></label>
+      <a class="drive" href="https://docs.google.com/spreadsheets/d/16-h2Cs0L7eOu5WBPS02-dVW42-O_6YQVBNMa9_0rh5A/export?format=csv&gid=1763322309" download>Descargar CSV</a>
+      <a class="drive" href="https://docs.google.com/spreadsheets/d/16-h2Cs0L7eOu5WBPS02-dVW42-O_6YQVBNMa9_0rh5A/edit?gid=1763322309#gid=1763322309" target="_blank" rel="noopener">Abrir en Drive</a>
+      <div class="estado" id="e3"></div>
+    </div>
+
+    <button id="btnVer" disabled>Ver calendarios</button>
+    <p id="aviso">Los ficheros deben estar guardados en <b>CSV UTF-8 (delimitado por comas)</b>. Si los acentos salen mal, vuelve a guardarlos desde Excel con ese formato.</p>
+    <p id="borrarCacheWrap" style="display:none;font:400 11.5px 'Barlow',sans-serif;color:#8A949C;margin-top:8px;">
+      Los datos se guardan en este navegador para que no tengas que volver a cargarlos.
+      <a href="#" id="borrarCache" style="color:#B4443F;text-decoration:underline;">Borrar los datos guardados</a>
+    </p>
+  </div>
+</div>
+
+<div id="bar" style="display:none;">
+  <div>
+    <div class="sub">Planificación Anual NTC</div>
+    <div class="brand" id="tituloAnio">Consulta por tienda</div>
+  </div>
+  <input type="search" id="buscar" placeholder="Buscar centro o población…" autocomplete="off">
+  <select id="sel"></select>
+  <button id="btnImp">Guardar en PDF / Imprimir</button>
+  <label id="lblSoloMod" style="display:none;align-items:center;gap:6px;font:600 11.5px 'Barlow',sans-serif;color:#CFE4D6;cursor:pointer;">
+    <input type="checkbox" id="soloMod" style="width:auto;margin:0;cursor:pointer;"> Solo modificadas
+  </label>
+  <button class="ghost" id="btnActualizar">Actualizar datos</button>
+  <button class="ghost" id="btnOtro">Cargar otros ficheros</button>
+  <span id="estado"></span>
+</div>
+
+<div id="doc"></div>
+
+<script>
+var FONTS = {
+  'Archivo / Barlow': { head: "'Archivo', sans-serif", body: "'Barlow', sans-serif" },
+  'Work Sans':        { head: "'Work Sans', sans-serif", body: "'Work Sans', sans-serif" },
+  'Source Sans':      { head: "'Source Sans 3', sans-serif", body: "'Source Sans 3', sans-serif" },
+  'Libre Franklin':   { head: "'Libre Franklin', sans-serif", body: "'Libre Franklin', sans-serif" },
+  'IBM Plex Sans':    { head: "'IBM Plex Sans', sans-serif", body: "'IBM Plex Sans', sans-serif" },
+  'Arial':            { head: "Arial, Helvetica, sans-serif", body: "Arial, Helvetica, sans-serif" }
+};
+
+var MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+var DIAS  = ['LUNES','MARTES','MIÉRCOLES','JUEVES','VIERNES','SÁBADO'];
+var DIAS3 = ['LUN','MAR','MIÉ','JUE','VIE','SÁB'];
+
+function cap(s){ return s ? s.charAt(0) + s.slice(1).toLowerCase() : s; }
+
+function lum(hex){
+  var h = String(hex).replace('#','');
+  if (h.length < 6) return 1;
+  var r = parseInt(h.substr(0,2),16), g = parseInt(h.substr(2,2),16), b = parseInt(h.substr(4,2),16);
+  return (0.299*r + 0.587*g + 0.114*b) / 255;
+}
+
+function darken(hex, f){
+  var h = String(hex).replace('#','');
+  if (h.length < 6) return hex;
+  function c(i){
+    var v = Math.round(parseInt(h.substr(i,2),16) * f).toString(16);
+    return v.length < 2 ? '0' + v : v;
+  }
+  return '#' + c(0) + c(2) + c(4);
+}
+
+function el(tag, style, text){
+  var e = document.createElement(tag);
+  if (style) e.setAttribute('style', style);
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+var DEFAULT_NOTE = '';
+
+function renderStore(STORE){
+  var cfg = STORE.cfg || {};
+  var accent = cfg.accent || '#15803D';
+  var accentDark = darken(accent, 0.62);
+  var anio = Number(STORE.anio) || 2026;
+  var scale = Number(cfg.scale) || 1;
+  var fam = FONTS[cfg.font] || FONTS['Archivo / Barlow'];
+  var showPed = cfg.showPed !== false;
+  var showVeh = cfg.showVeh !== false;
+  var showCol = cfg.showCol === true;
+
+  var VC = {
+    0: (cfg.colors && cfg.colors[0]) || '#f4cccc',
+    1: (cfg.colors && cfg.colors[1]) || '#fce5cd',
+    2: (cfg.colors && cfg.colors[2]) || '#fafafa',
+    3: (cfg.colors && cfg.colors[3]) || '#d9ead3',
+    4: (cfg.colors && cfg.colors[4]) || '#cfdff3',
+    5: (cfg.colors && cfg.colors[5]) || '#ffe599'
+  };
+  var vcolor = function(v){ return VC[v] != null ? VC[v] : VC[5]; };
+  var vtext  = function(v){ return lum(vcolor(v)) < 0.62 ? '#ffffff' : '#1f2937'; };
+
+  // Cifra arriba, palabra completa debajo
+  function tramoParts(t){
+    var parts = [];
+    if (showPed) parts.push({ n: t.p, l: t.p === 1 ? 'Pedido' : 'Pedidos' });
+    if (showVeh) parts.push({ n: t.v, l: t.v === 1 ? 'Vehículo' : 'Vehículos' });
+    if (showCol) parts.push({ n: t.c, l: t.c === 1 ? 'Columna' : 'Columnas' });
+    if (!parts.length) parts.push({ n: t.p, l: t.p === 1 ? 'Pedido' : 'Pedidos' });
+    return parts;
+  }
+
+  var labels = cfg.labels || {};
+  var legend = [
+    { color: VC[1], label: labels.v1  || '1 vehículo' },
+    { color: VC[2], label: labels.v2  || '2 vehículos' },
+    { color: VC[3], label: labels.v3  || '3 vehículos' },
+    { color: VC[4], label: labels.v4  || '4 vehículos' },
+    { color: VC[5], label: labels.v5  || '5 vehículos' },
+    { color: VC[0], label: labels.sin || 'Sin servicio' }
+  ];
+
+  var dpto      = STORE.dpto     || 'DPTO. TIENDAS, RRHH Y RREE';
+  var divprofi  = STORE.divprofi || 'DIVPROFI  IS - ar';
+  var tituloDoc = '"Planificación Anual NTC ' + anio + '"';
+
+  var ficha = {
+    centro:       STORE.centro || '',
+    denominacion: STORE.denominacion || '—',
+    poblacion:    STORE.poblacion || '—',
+    provincia:    STORE.provincia || '—',
+    zona:         STORE.zona || '—',
+    region:       STORE.region || '—'
+  };
+
+  var px = function(n){ return (n * scale).toFixed(2) + 'px'; };
+
+  // Celdas de un mes: columnas lun–sáb, domingos fuera, 6 filas fijas
+  function buildCells(mIdx, days){
+    var last = new Date(anio, mIdx + 1, 0).getDate();
+    var cells = [];
+    var week = [null,null,null,null,null,null];
+    var started = false;
+    function flush(){ for (var i=0;i<6;i++) cells.push(week[i] || { empty:true }); }
+    for (var d=1; d<=last; d++){
+      var dow = new Date(anio, mIdx, d).getDay(); // 0 dom .. 6 sáb
+      if (dow === 0) continue;
+      var col = dow - 1;
+      if (col === 0 && started){ flush(); week = [null,null,null,null,null,null]; }
+      var dd = (days && days[d]) || { m:{p:0,v:0,c:0}, t:{p:0,v:0,c:0} };
+      week[col] = {
+        day: d,
+        mBg: vcolor(dd.m.v), mTxt: vtext(dd.m.v), mSin: dd.m.v === 0, mParts: tramoParts(dd.m),
+        tBg: vcolor(dd.t.v), tTxt: vtext(dd.t.v), tSin: dd.t.v === 0, tParts: tramoParts(dd.t)
+      };
+      started = true;
+    }
+    if (started) flush();
+    return cells;
+  }
+
+  // --- Encabezado común: dpto + título + raya + ficha del centro ---
+  function headerBlock(){
+    var frag = document.createDocumentFragment();
+
+    var top = el('div', 'display:flex;align-items:flex-start;justify-content:space-between;gap:20px;border-bottom:1px solid #000;padding-bottom:4px;');
+    var left = el('div', 'font-weight:400;font-size:'+px(12)+';color:#000;line-height:1.5;font-family:Arial,Helvetica,sans-serif;');
+    left.appendChild(el('div', '', dpto));
+    left.appendChild(el('div', '', divprofi));
+    top.appendChild(left);
+    top.appendChild(el('div', 'font-weight:700;font-size:'+px(12)+';color:#000;white-space:nowrap;font-family:Arial,Helvetica,sans-serif;', tituloDoc));
+    frag.appendChild(top);
+
+    var band = el('div', 'display:flex;align-items:stretch;margin:9px auto 0;width:88%;border:1px solid #C9D0D6;border-radius:8px;overflow:hidden;background:#FAFBFC;');
+
+    var cCentro = el('div', 'flex:none;display:flex;flex-direction:column;justify-content:center;padding:6px 14px;background:'+accentDark+';color:#fff;');
+    cCentro.appendChild(el('div', 'font-weight:600;font-size:'+px(7)+';letter-spacing:1.2px;opacity:.78;font-family:'+fam.head, 'CENTRO'));
+    cCentro.appendChild(el('div', 'font-weight:800;font-size:'+px(17)+';line-height:1.05;font-family:'+fam.head, ficha.centro));
+    band.appendChild(cCentro);
+
+    function cell(label, value, grow, big, last){
+      var wrap = el('div', 'flex:'+(grow?'1':'none')+';display:flex;align-items:center;padding:6px '+(big?'16px':'14px')+';'+(last?'':'border-right:1px solid #DDE3E8;'));
+      var inner = el('div');
+      inner.appendChild(el('div', 'font-weight:600;font-size:'+px(7)+';letter-spacing:1.2px;color:#8A949C;font-family:'+fam.head, label));
+      inner.appendChild(el('div', big
+        ? 'font-weight:700;font-size:'+px(13)+';color:#1f2937;line-height:1.15;font-family:'+fam.head
+        : 'font-weight:'+(grow?'600':'700')+';font-size:'+px(11.5)+';color:#374151;line-height:1.2;font-family:'+fam.body, value));
+      wrap.appendChild(inner);
+      return wrap;
+    }
+    band.appendChild(cell('DENOMINACIÓN', ficha.denominacion, true, true, false));
+    band.appendChild(cell('POBLACIÓN',    ficha.poblacion,    true, false, false));
+    band.appendChild(cell('PROVINCIA',    ficha.provincia,    true, false, false));
+    band.appendChild(cell('ZONA',         ficha.zona,         false, false, false));
+    band.appendChild(cell('REGIÓN',       ficha.region,       false, false, true));
+    frag.appendChild(band);
+
+    return frag;
+  }
+
+  function legendBar(compact){
+    var bar = el('div', 'display:flex;align-items:center;gap:'+(compact?'14px':'18px')+';flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px solid #dfe3e6;');
+    bar.appendChild(el('span', 'font-weight:700;font-size:'+px(compact?9:10)+';color:#6b7280;letter-spacing:.5px;font-family:'+fam.head, 'VEHÍCULOS'));
+    legend.forEach(function(lg){
+      var s = el('span', 'display:inline-flex;align-items:center;gap:'+(compact?'5px':'6px')+';font-weight:600;font-size:'+px(compact?9.5:10.5)+';color:#4b5563;font-family:'+fam.body);
+      s.appendChild(el('span', 'width:'+(compact?'13px':'15px')+';height:'+(compact?'13px':'15px')+';border-radius:4px;background:'+lg.color+';border:1px solid rgba(0,0,0,.22);'));
+      s.appendChild(document.createTextNode(lg.label));
+      bar.appendChild(s);
+    });
+    return bar;
+  }
+
+  // Bloque de un tramo (M o T) dentro de la celda de un dia
+  function tramoRow(letra, bg, txt, sin, parts){
+    var row = el('div', 'flex:1;display:flex;align-items:center;gap:3px;padding:2px 3px;border-radius:6px;background:'+bg+';color:'+txt+';border:1px solid rgba(0,0,0,.22);');
+    row.appendChild(el('span', 'font-weight:700;font-size:'+px(9)+';opacity:.5;flex:none;font-family:'+fam.head, letra));
+    if (sin){
+      row.appendChild(el('span', 'flex:1;text-align:center;font-weight:700;font-size:'+px(10)+';font-family:'+fam.body, 'Sin servicio'));
+    } else {
+      var box = el('div', 'flex:1;display:flex;justify-content:space-evenly;align-items:center;gap:4px;');
+      parts.forEach(function(p){
+        var col = el('div', 'display:flex;flex-direction:column;align-items:center;line-height:1.08;');
+        col.appendChild(el('span', 'font-weight:700;font-size:'+px(13)+';font-family:'+fam.body, p.n));
+        col.appendChild(el('span', 'font-weight:600;font-size:'+px(6.5)+';opacity:.72;white-space:nowrap;font-family:'+fam.head, p.l));
+        box.appendChild(col);
+      });
+      row.appendChild(box);
+    }
+    return row;
+  }
+
+  var doc = document.getElementById('doc');
+  doc.innerHTML = '';
+
+  /* ---------- 2 PAGINAS SEMESTRALES (opcionales) ---------- */
+  var globals = (cfg.showSemestrales === true) ? [
+    { title: 'ENERO – JUNIO',      from: 0,  to: 6  },
+    { title: 'JULIO – DICIEMBRE',  from: 6,  to: 12 }
+  ] : [];
+  globals.forEach(function(gp){
+    var page = el('div', 'font-family:'+fam.body); page.className = 'page';
+    page.appendChild(headerBlock());
+    page.appendChild(el('div', 'text-align:center;font-weight:700;font-size:'+px(13)+';color:#000;margin:12px 0 6px;text-transform:uppercase;font-family:Arial,Helvetica,sans-serif;', gp.title));
+
+    var grid = el('div', 'flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:11px 16px;');
+    for (var mi = gp.from; mi < gp.to; mi++){
+      var mo = STORE.months[mi] || { name: MESES[mi], days: {} };
+      var col = el('div', 'display:flex;flex-direction:column;');
+      col.appendChild(el('div', 'font-weight:700;font-size:'+px(15)+';color:'+accent+';text-transform:capitalize;margin-bottom:5px;letter-spacing:.3px;text-align:center;font-family:'+fam.head, cap(mo.name)));
+      var wd = el('div', 'display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-bottom:3px;');
+      DIAS3.forEach(function(d){
+        wd.appendChild(el('div', 'font-weight:700;font-size:'+px(8.5)+';color:#6B7480;text-align:center;font-family:'+fam.head, d));
+      });
+      col.appendChild(wd);
+      var body = el('div', 'flex:1;min-height:0;display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:repeat(6,1fr);gap:3px;align-content:start;');
+      buildCells(mi, mo.days).forEach(function(c){
+        if (c.empty){ body.appendChild(el('div')); return; }
+        var cell = el('div', 'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:3px 2px;border:1px solid #A7B0B8;border-radius:5px;background:#fff;');
+        cell.appendChild(el('span', 'font-weight:700;font-size:'+px(10)+';color:#374151;line-height:1;font-family:'+fam.body, c.day));
+        var sw = el('div', 'display:flex;gap:2px;width:100%;');
+        sw.appendChild(el('span', 'flex:1;height:12px;border-radius:2px;background:'+c.mBg+';border:1px solid rgba(0,0,0,.28);'));
+        sw.appendChild(el('span', 'flex:1;height:12px;border-radius:2px;background:'+c.tBg+';border:1px solid rgba(0,0,0,.28);'));
+        cell.appendChild(sw);
+        body.appendChild(cell);
+      });
+      col.appendChild(body);
+      grid.appendChild(col);
+    }
+    page.appendChild(grid);
+
+    var lb = legendBar(true);
+    var hint = el('span', 'display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:'+px(9.5)+';color:#4b5563;margin-left:auto;font-family:'+fam.body);
+    var pair = el('span', 'display:flex;gap:2px;');
+    pair.appendChild(el('span', 'width:10px;height:13px;border-radius:2px;background:#cbd5e1;'));
+    pair.appendChild(el('span', 'width:10px;height:13px;border-radius:2px;background:#94a3b8;'));
+    hint.appendChild(pair);
+    hint.appendChild(document.createTextNode('cada día: izq. mañana · der. tarde'));
+    lb.appendChild(hint);
+    page.appendChild(lb);
+    doc.appendChild(page);
+  });
+
+  /* ---------- 12 PÁGINAS MENSUALES ---------- */
+  for (var m = 0; m < 12; m++){
+    var moData = STORE.months[m] || { name: MESES[m], days: {} };
+    var page2 = el('div', 'font-family:'+fam.body); page2.className = 'page';
+    page2.appendChild(headerBlock());
+    page2.appendChild(el('div', 'text-align:center;font-weight:700;font-size:'+px(13)+';color:#000;margin:5px 0 3px;text-transform:uppercase;font-family:Arial,Helvetica,sans-serif;', cap(MESES[m]) + ' ' + anio));
+
+    var wrow = el('div', 'display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:3px;margin-bottom:4px;');
+    DIAS.forEach(function(d){
+      wrow.appendChild(el('div', 'font-weight:700;font-size:'+px(11)+';color:#fff;background:'+accentDark+';border-radius:5px;text-align:center;padding:5px 0;letter-spacing:.5px;font-family:'+fam.head, d));
+    });
+    page2.appendChild(wrow);
+
+    var mgrid = el('div', 'flex:1;min-height:0;display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:repeat(6,1fr);gap:5px;align-content:start;');
+    buildCells(m, moData.days).forEach(function(c){
+      if (c.empty){ mgrid.appendChild(el('div')); return; }
+      var card = el('div', 'display:flex;flex-direction:column;gap:3px;padding:4px 2px;border-radius:9px;background:#fff;');
+      card.appendChild(el('span', 'align-self:flex-start;min-width:24px;height:17px;display:inline-flex;align-items:center;justify-content:center;padding:0 6px;background:'+accent+';color:#fff;border-radius:6px;font-weight:700;font-size:'+px(13)+';font-family:'+fam.head, c.day));
+      card.appendChild(tramoRow('M', c.mBg, c.mTxt, c.mSin, c.mParts));
+      card.appendChild(tramoRow('T', c.tBg, c.tTxt, c.tSin, c.tParts));
+      mgrid.appendChild(card);
+    });
+    page2.appendChild(mgrid);
+    page2.appendChild(legendBar(false));
+    var mtHint = el('span', 'font-weight:600;font-size:'+px(10.5)+';color:#9AA4AC;margin-left:auto;font-family:'+fam.body, 'M = mañana · T = tarde');
+    page2.lastChild.appendChild(mtHint);
+
+    var noteTxt = (STORE.nota != null && STORE.nota !== '') ? STORE.nota : DEFAULT_NOTE;
+    if (noteTxt){
+      var nb = el('div', 'margin-top:5px;');
+      nb.appendChild(el('div', 'font-weight:700;font-size:'+px(9)+';color:#000;font-style:italic;font-family:Arial,Helvetica,sans-serif;', 'Notas:'));
+      nb.appendChild(el('p', 'margin:2px 0 0;font-weight:400;font-size:'+px(7.6)+';color:#333;line-height:1.32;text-align:justify;white-space:pre-line;font-family:Arial,Helvetica,sans-serif;', noteTxt));
+      page2.appendChild(nb);
+    }
+    doc.appendChild(page2);
+  }
+}
+
+/* =====================================================================
+   Lectura de CSV y consulta por tienda
+   ===================================================================== */
+
+function splitCSVLine(line){
+  var out = [], cur = '', inQ = false;
+  for (var i = 0; i < line.length; i++){
+    var ch = line[i];
+    if (inQ){
+      if (ch === '"'){ if (line[i+1] === '"'){ cur += '"'; i++; } else inQ = false; }
+      else cur += ch;
+    } else {
+      if (ch === '"') inQ = true;
+      else if (ch === ','){ out.push(cur); cur = ''; }
+      else cur += ch;
+    }
+  }
+  out.push(cur);
+  return out;
+}
+
+function normCol(s){
+  return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/\s+/g,' ').trim();
+}
+function num(x){ var n = parseInt(x, 10); return isNaN(n) ? 0 : n; }
+
+/* --- Oferta -> tiendas agrupadas --- */
+function parseOferta(text){
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  var lines = text.split(/\r?\n/);
+  var first = 0;
+  while (first < lines.length && !lines[first].trim()) first++;
+  var headers = splitCSVLine(lines[first]).map(function(h){ return h.trim(); });
+
+  function idxOf(w){
+    var n = normCol(w);
+    for (var i = 0; i < headers.length; i++) if (normCol(headers[i]) === n) return i;
+    return -1;
+  }
+  function idxOfAny(l){
+    for (var i = 0; i < l.length; i++){ var k = idxOf(l[i]); if (k >= 0) return k; }
+    return -1;
+  }
+
+  var C = {
+    centro: idxOf('Centro'), fecha: idxOf('Fecha'),
+    vehTM: idxOf('Vehículos TM'), vehTT: idxOf('Vehículos TT'),
+    pedTM: idxOf('Pedidos TM'),   pedTT: idxOf('Pedidos TT'),
+    region: idxOf('Región'),
+    ofTM: idxOfAny(['Oferta NTC+NSD TM','Oferta NTC TM','Oferta TM','Columnas TM']),
+    ofTT: idxOfAny(['Oferta NTC+NSD TT','Oferta NTC TT','Oferta TT','Columnas TT'])
+  };
+  var obligatorias = {
+    centro:'Centro', fecha:'Fecha',
+    vehTM:'Vehículos TM', vehTT:'Vehículos TT',
+    pedTM:'Pedidos TM',   pedTT:'Pedidos TT'
+  };
+  var faltan = Object.keys(obligatorias).filter(function(k){ return C[k] < 0; });
+  if (faltan.length){
+    throw new Error('Al CSV le faltan columnas: ' +
+      faltan.map(function(k){ return obligatorias[k]; }).join(', ') +
+      '.  Cabeceras encontradas: ' + headers.join(' | '));
+  }
+
+  var stores = {}, filasOk = 0, filasMal = 0;
+  for (var li = first + 1; li < lines.length; li++){
+    var line = lines[li];
+    if (!line || !line.trim()) continue;
+    var r = splitCSVLine(line);
+    var centro = (r[C.centro] || '').trim();
+    if (!centro || !/^\d+$/.test(centro)) continue;   // salta filas vacias o basura
+    var fp = (r[C.fecha] || '').trim().split('/');
+    var d = parseInt(fp[0],10), m = parseInt(fp[1],10), y = parseInt(fp[2],10);
+    if (!d || !m || !y || m < 1 || m > 12){ filasMal++; continue; }
+
+    var s = stores[centro];
+    if (!s){
+      s = stores[centro] = {
+        centro: centro,
+        region: C.region >= 0 ? (r[C.region] || '').trim() : '',
+        anios: {},
+        months: MESES.map(function(name, i){ return { idx:i, name:name, days:{} }; })
+      };
+    }
+    s.anios[y] = (s.anios[y] || 0) + 1;
+    s.months[m-1].days[d] = {
+      m: { p: num(r[C.pedTM]), v: num(r[C.vehTM]), c: C.ofTM >= 0 ? num(r[C.ofTM]) : 0 },
+      t: { p: num(r[C.pedTT]), v: num(r[C.vehTT]), c: C.ofTT >= 0 ? num(r[C.ofTT]) : 0 }
+    };
+    filasOk++;
+  }
+
+  // Año mayoritario de cada tienda
+  Object.keys(stores).forEach(function(c){
+    var s = stores[c];
+    var a = Object.keys(s.anios).map(Number)
+      .filter(function(y){ return !isNaN(y); })
+      .sort(function(x,y){ return s.anios[y] - s.anios[x]; });
+    s.anio = a.length ? a[0] : new Date().getFullYear();
+    s.variosAnios = a.length > 1;
+    delete s.anios;
+  });
+
+  if (!Object.keys(stores).length){
+    throw new Error('No se ha encontrado ninguna tienda con fechas válidas en el fichero.');
+  }
+  return { stores: stores, filasOk: filasOk, filasMal: filasMal };
+}
+
+/* --- Maestro de tiendas: detecta los dos formatos --- */
+function parseMaestro(text){
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  var lines = text.split(/\r?\n/);
+  var hdrIdx = -1, hdr = null;
+  for (var i = 0; i < Math.min(6, lines.length); i++){
+    if (!lines[i] || !lines[i].trim()) continue;
+    var cols = splitCSVLine(lines[i]).map(normCol);
+    if (cols.indexOf('centro') >= 0 && cols.indexOf('denominacion') >= 0){
+      hdrIdx = i; hdr = cols; break;
+    }
+  }
+  var esHojaExcel = hdr && (hdr.indexOf('direccion regional') >= 0 || hdr.indexOf('zona coordinador') >= 0);
+  var iProv = hdr ? hdr.indexOf('provincia') : -1;
+  var iZona = hdr ? hdr.indexOf('zona') : -1;
+  var porNombre = !esHojaExcel && hdr && iProv >= 0 && iZona >= 0;
+  var iCen = hdr ? hdr.indexOf('centro') : 0;
+  var iDen = hdr ? hdr.indexOf('denominacion') : 1;
+  var iPob = hdr ? hdr.indexOf('poblacion') : 2;
+
+  var meta = {}, n = 0;
+  for (var k = (hdrIdx >= 0 ? hdrIdx + 1 : 0); k < lines.length; k++){
+    var line = lines[k];
+    if (!line || !line.trim()) continue;
+    var r = splitCSVLine(line);
+    var centro = (r[porNombre ? iCen : 0] || '').trim();
+    if (!/^\d+$/.test(centro)) continue;
+    meta[centro] = porNombre
+      ? { denominacion:(r[iDen]||'').trim(), poblacion:(r[iPob]||'').trim(),
+          provincia:(r[iProv]||'').trim(), zona:(r[iZona]||'').trim() }
+      : { denominacion:(r[1]||'').trim(), poblacion:(r[2]||'').trim(),
+          provincia:(r[4]||'').trim(), zona:(r[7]||'').trim() };
+    n++;
+  }
+  if (!n) throw new Error('No se ha reconocido ninguna tienda. Revisa que la primera columna sea el código de centro.');
+  return { meta: meta, n: n, porNombre: porNombre };
+}
+
+/* =====================================================================
+   Interfaz
+   ===================================================================== */
+
+var CFG = {
+  font: 'Archivo / Barlow', scale: 1, accent: '#15803D',
+  showPed: true, showVeh: true, showCol: false, showSemestrales: false,
+  colors: { 0:'#f4cccc', 1:'#fce5cd', 2:'#fafafa', 3:'#d9ead3', 4:'#cfdff3', 5:'#ffe599' },
+  labels: { v1:'1 vehículo', v2:'2 vehículos', v3:'3 vehículos',
+            v4:'4 vehículos', v5:'5 vehículos', sin:'Sin servicio' }
+};
+
+var DATOS = null;   // { stores, filasOk, filasMal }
+var META  = {};     // maestro
+var MODS  = null;   // modificaciones pendientes de aplicar
+var MODIFICADAS = {};  // centro -> nº de dias cambiados (o 'nueva')
+var LISTA = [];     // codigos ordenados
+
+var $ = function(id){ return document.getElementById(id); };
+
+/* --- Sheet de origen: mismo documento donde Pepa vuelca el export de
+   Metabase, en 3 pestañas (gid). La página lee siempre directo de ahí;
+   nadie más tiene que subir ni descargar nada. --- */
+var SHEET_BASE = 'https://docs.google.com/spreadsheets/d/16-h2Cs0L7eOu5WBPS02-dVW42-O_6YQVBNMa9_0rh5A/export?format=csv&gid=';
+var URLS = {
+  oferta:  SHEET_BASE + '0',
+  maestro: SHEET_BASE + '1033958494',
+  mods:    SHEET_BASE + '1763322309'
+};
+
+function fetchTexto(url){
+  return fetch(url, { cache: 'no-store', mode: 'cors' }).then(function(r){
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.text();
+  });
+}
+
+/* --- Caché local: guarda los CSV (comprimidos) en este navegador, de
+   respaldo, por si algún día falla la conexión con el Sheet.
+   Se usa IndexedDB (mucho más margen que localStorage, que solo da unos
+   5-10 MB y se llenaba con la oferta anual completa, dejando sin sitio al
+   maestro de tiendas). Si el navegador no tuviera IndexedDB disponible,
+   se cae a localStorage como plan B. --- */
+var CACHE = { oferta: 'ntc.cache.oferta', maestro: 'ntc.cache.maestro', mods: 'ntc.cache.mods', fecha: 'ntc.cache.fecha' };
+var IDB_NOMBRE = 'ntcPlanificacionCache', IDB_ALMACEN = 'archivos';
+var usarIDB = (typeof indexedDB !== 'undefined');
+
+function abrirIDB(){
+  return new Promise(function(resolve, reject){
+    var req = indexedDB.open(IDB_NOMBRE, 1);
+    req.onupgradeneeded = function(){ req.result.createObjectStore(IDB_ALMACEN); };
+    req.onsuccess = function(){ resolve(req.result); };
+    req.onerror = function(){ reject(req.error); };
+  });
+}
+function dbSet(clave, valor){
+  if (!usarIDB){
+    return new Promise(function(resolve, reject){
+      try { localStorage.setItem(clave, valor); resolve(); } catch (e) { reject(e); }
+    });
+  }
+  return abrirIDB().then(function(db){
+    return new Promise(function(resolve, reject){
+      var tx = db.transaction(IDB_ALMACEN, 'readwrite');
+      tx.objectStore(IDB_ALMACEN).put(valor, clave);
+      tx.oncomplete = function(){ resolve(); };
+      tx.onerror = function(){ reject(tx.error); };
+    });
+  });
+}
+function dbGet(clave){
+  if (!usarIDB){
+    return new Promise(function(resolve){
+      var v = null;
+      try { v = localStorage.getItem(clave); } catch (e) {}
+      resolve(v);
+    });
+  }
+  return abrirIDB().then(function(db){
+    return new Promise(function(resolve, reject){
+      var tx = db.transaction(IDB_ALMACEN, 'readonly');
+      var req = tx.objectStore(IDB_ALMACEN).get(clave);
+      req.onsuccess = function(){ resolve(req.result != null ? req.result : null); };
+      req.onerror = function(){ reject(req.error); };
+    });
+  });
+}
+function dbDelete(clave){
+  if (!usarIDB){
+    return new Promise(function(resolve){
+      try { localStorage.removeItem(clave); } catch (e) {}
+      resolve();
+    });
+  }
+  return abrirIDB().then(function(db){
+    return new Promise(function(resolve, reject){
+      var tx = db.transaction(IDB_ALMACEN, 'readwrite');
+      tx.objectStore(IDB_ALMACEN).delete(clave);
+      tx.oncomplete = function(){ resolve(); };
+      tx.onerror = function(){ reject(tx.error); };
+    });
+  });
+}
+
+function comprimir(texto){
+  try {
+    if (window.LZString) return 'LZ1:' + LZString.compressToUTF16(texto);
+  } catch (e) {}
+  return texto; // sin compresión disponible (p.ej. CDN bloqueado): se guarda tal cual
+}
+function descomprimir(texto){
+  if (texto == null) return null;
+  if (texto.indexOf('LZ1:') === 0){
+    try { return LZString.decompressFromUTF16(texto.slice(4)); } catch (e) { return null; }
+  }
+  return texto;
+}
+
+function guardarEnCache(clave, texto){
+  dbSet(clave, comprimir(texto)).catch(function(e){
+    console.warn('No se ha podido guardar en la caché local:', e && e.name, e && e.message);
+  });
+}
+
+function hayCache(){
+  return Promise.all([dbGet(CACHE.oferta), dbGet(CACHE.maestro), dbGet(CACHE.mods)])
+    .then(function(vs){ return vs.some(function(v){ return !!v; }); })
+    .catch(function(){ return false; });
+}
+
+function cargarDesdeCache(){
+  return dbGet(CACHE.fecha).then(function(fecha){
+    var fechaTxt = fecha ? new Date(fecha).toLocaleString('es-ES') : '';
+    var sufijo = fechaTxt ? ' · guardado ' + fechaTxt : '';
+
+    return dbGet(CACHE.oferta).then(function(raw){
+      raw = descomprimir(raw);
+      if (raw){
+        try {
+          DATOS = parseOferta(raw);
+          var n = Object.keys(DATOS.stores).length;
+          marcar($('z1'), $('e1'), n + ' tiendas' + sufijo, false);
+        } catch (ex){ DATOS = null; }
+      }
+    }).then(function(){
+      return dbGet(CACHE.maestro);
+    }).then(function(raw){
+      raw = descomprimir(raw);
+      if (raw){
+        try {
+          var r = parseMaestro(raw);
+          META = r.meta;
+          marcar($('z2'), $('e2'), r.n.toLocaleString('es-ES') + ' tiendas' + sufijo, false);
+        } catch (ex){ META = {}; }
+      }
+    }).then(function(){
+      return dbGet(CACHE.mods);
+    }).then(function(raw){
+      raw = descomprimir(raw);
+      if (raw){
+        try {
+          MODS = parseOferta(raw);
+          var nm = Object.keys(MODS.stores).length;
+          marcar($('z3'), $('e3'), nm + ' tienda' + (nm === 1 ? '' : 's') + sufijo, false);
+        } catch (ex){ MODS = null; }
+      }
+    }).then(function(){
+      comprobarListo();
+      return hayCache();
+    }).then(function(hay){
+      if (hay && $('borrarCacheWrap')) $('borrarCacheWrap').style.display = 'block';
+    });
+  }).catch(function(e){
+    console.warn('No se ha podido leer la caché local:', e);
+  });
+}
+
+function leerFichero(file, cb, err){
+  var rd = new FileReader();
+  rd.onload = function(){ cb(rd.result); };
+  rd.onerror = function(){ err('No se ha podido leer el archivo.'); };
+  rd.readAsText(file, 'UTF-8');
+}
+
+function marcar(zona, estado, msg, esError){
+  zona.classList.toggle('ok', !esError && !!msg);
+  estado.textContent = msg || '';
+  estado.classList.toggle('err', !!esError);
+}
+
+function comprobarListo(){
+  $('btnVer').disabled = !DATOS;
+}
+
+function cargarOferta(file){
+  var z = $('z1'), e = $('e1');
+  marcar(z, e, 'Leyendo ' + file.name + '…', false);
+  leerFichero(file, function(txt){
+    try {
+      DATOS = parseOferta(txt);
+      var n = Object.keys(DATOS.stores).length;
+      var anios = {};
+      Object.keys(DATOS.stores).forEach(function(c){ anios[DATOS.stores[c].anio] = 1; });
+      marcar(z, e, n + ' tiendas · ' + DATOS.filasOk.toLocaleString('es-ES') +
+        ' filas · año ' + Object.keys(anios).sort().join(' y '), false);
+      guardarEnCache(CACHE.oferta, txt);
+      dbSet(CACHE.fecha, new Date().toISOString());
+      if ($('borrarCacheWrap')) $('borrarCacheWrap').style.display = 'block';
+    } catch (ex){
+      DATOS = null;
+      marcar(z, e, ex.message, true);
+    }
+    comprobarListo();
+  }, function(m){ marcar(z, e, m, true); });
+}
+
+function cargarMaestro(file){
+  var z = $('z2'), e = $('e2');
+  marcar(z, e, 'Leyendo ' + file.name + '…', false);
+  leerFichero(file, function(txt){
+    try {
+      var r = parseMaestro(txt);
+      META = r.meta;
+      marcar(z, e, r.n.toLocaleString('es-ES') + ' tiendas cargadas', false);
+      guardarEnCache(CACHE.maestro, txt);
+      if ($('borrarCacheWrap')) $('borrarCacheWrap').style.display = 'block';
+    } catch (ex){
+      META = {};
+      marcar(z, e, ex.message, true);
+    }
+  }, function(m){ marcar(z, e, m, true); });
+}
+
+function cargarMods(file){
+  var z = $('z3'), e = $('e3');
+  marcar(z, e, 'Leyendo ' + file.name + '…', false);
+  leerFichero(file, function(txt){
+    try {
+      MODS = parseOferta(txt);
+      var n = Object.keys(MODS.stores).length;
+      marcar(z, e, n + ' tienda' + (n === 1 ? '' : 's') + ' con cambios · ' +
+        MODS.filasOk.toLocaleString('es-ES') + ' días', false);
+      guardarEnCache(CACHE.mods, txt);
+      if ($('borrarCacheWrap')) $('borrarCacheWrap').style.display = 'block';
+    } catch (ex){
+      MODS = null;
+      marcar(z, e, ex.message, true);
+    }
+  }, function(m){ marcar(z, e, m, true); });
+}
+
+// Arrastrar y soltar
+function zonaDrop(zonaId, handler){
+  var z = $(zonaId);
+  ['dragenter','dragover'].forEach(function(ev){
+    z.addEventListener(ev, function(e){ e.preventDefault(); z.classList.add('drag'); });
+  });
+  ['dragleave','drop'].forEach(function(ev){
+    z.addEventListener(ev, function(e){ e.preventDefault(); z.classList.remove('drag'); });
+  });
+  z.addEventListener('drop', function(e){
+    var f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) handler(f);
+  });
+}
+zonaDrop('z1', cargarOferta);
+zonaDrop('z2', cargarMaestro);
+zonaDrop('z3', cargarMods);
+$('f1').addEventListener('change', function(){ if (this.files[0]) cargarOferta(this.files[0]); });
+$('f2').addEventListener('change', function(){ if (this.files[0]) cargarMaestro(this.files[0]); });
+$('f3').addEventListener('change', function(){ if (this.files[0]) cargarMods(this.files[0]); });
+
+$('borrarCache').addEventListener('click', function(e){
+  e.preventDefault();
+  if (!confirm('¿Borrar los datos guardados en este equipo? Tendrás que volver a cargar los ficheros la próxima vez.')) return;
+  Promise.all([
+    dbDelete(CACHE.oferta), dbDelete(CACHE.maestro), dbDelete(CACHE.mods), dbDelete(CACHE.fecha)
+  ]).catch(function(){}).then(function(){ location.reload(); });
+});
+
+$('verManual').addEventListener('click', function(e){
+  e.preventDefault();
+  $('cargando').style.display = 'none';
+  $('manual').style.display = 'block';
+  cargarDesdeCache();
+});
+
+/* --- Aplicar el CSV de modificaciones sobre la oferta inicial --- */
+function aplicarMods(){
+  MODIFICADAS = {};
+  if (!MODS) return;
+  Object.keys(MODS.stores).forEach(function(c){
+    var src = MODS.stores[c];
+    var dst = DATOS.stores[c];
+    if (!dst){
+      // Tienda que no estaba en la oferta inicial: se anade completa
+      DATOS.stores[c] = src;
+      MODIFICADAS[c] = 'nueva';
+      return;
+    }
+    var n = 0;
+    src.months.forEach(function(mo, mi){
+      Object.keys(mo.days).forEach(function(d){
+        dst.months[mi].days[d] = mo.days[d];
+        n++;
+      });
+    });
+    if (src.region) dst.region = src.region;
+    MODIFICADAS[c] = n;
+  });
+}
+
+/* --- Paso a la consulta --- */
+function etiqueta(c){
+  var m = META[c] || {};
+  var partes = [c];
+  if (m.denominacion) partes.push(m.denominacion);
+  if (m.poblacion) partes.push('(' + m.poblacion + ')');
+  var t = partes.join(' · ');
+  if (MODIFICADAS[c]) t += MODIFICADAS[c] === 'nueva' ? '   ● NUEVA' : '   ● MODIFICADA';
+  return t;
+}
+
+function rellenarLista(filtro){
+  var sel = $('sel');
+  var f = normCol(filtro || '');
+  var solo = $('soloMod').checked;
+  var vis = LISTA.filter(function(c){
+    if (solo && !MODIFICADAS[c]) return false;
+    if (!f) return true;
+    var m = META[c] || {};
+    return normCol(c + ' ' + (m.denominacion||'') + ' ' + (m.poblacion||'') + ' ' + (m.provincia||'')).indexOf(f) >= 0;
+  });
+  sel.innerHTML = '';
+  vis.forEach(function(c){
+    var o = document.createElement('option');
+    o.value = c; o.textContent = etiqueta(c);
+    sel.appendChild(o);
+  });
+  if (!vis.length){
+    var o = document.createElement('option');
+    o.value = ''; o.textContent = 'Sin resultados';
+    sel.appendChild(o);
+  }
+  var nMod = Object.keys(MODIFICADAS).length;
+  $('estado').textContent = (f || solo
+    ? vis.length + ' de ' + LISTA.length + ' tiendas'
+    : LISTA.length + ' tiendas')
+    + (nMod ? '  ·  ' + nMod + ' con cambios' : '');
+  return vis;
+}
+
+function pintar(){
+  var c = $('sel').value;
+  if (!c || !DATOS.stores[c]) return;
+  var s = DATOS.stores[c];
+  var m = META[c] || {};
+  renderStore({
+    centro: s.centro,
+    region: s.region,
+    anio: s.anio,
+    denominacion: m.denominacion || '',
+    poblacion: m.poblacion || '',
+    provincia: m.provincia || '',
+    zona: m.zona || '',
+    nota: '',
+    cfg: CFG,
+    months: s.months
+  });
+  try { localStorage.setItem('ntc.ultimaTienda', c); } catch (e) {}
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+}
+
+function mostrarCalendarios(){
+  aplicarMods();
+  LISTA = Object.keys(DATOS.stores).sort(function(a,b){
+    return a.localeCompare(b, 'es', { numeric: true });
+  });
+  var anios = {};
+  LISTA.forEach(function(c){ anios[DATOS.stores[c].anio] = 1; });
+  $('tituloAnio').textContent = 'Oferta ' + Object.keys(anios).sort().join(' / ');
+
+  $('inicio').style.display = 'none';
+  $('bar').style.display = 'flex';
+  $('lblSoloMod').style.display = Object.keys(MODIFICADAS).length ? 'flex' : 'none';
+  rellenarLista('');
+
+  // Recupera la ultima tienda consultada, si sigue existiendo
+  var ult = null;
+  try { ult = localStorage.getItem('ntc.ultimaTienda'); } catch (e) {}
+  if (ult && DATOS.stores[ult]) $('sel').value = ult;
+  pintar();
+}
+
+$('btnVer').addEventListener('click', mostrarCalendarios);
+
+/* --- Arranque automático: lee las 3 pestañas del Sheet directamente.
+   Si algo falla (sin red, Sheet no accesible, etc.), cae a la última
+   copia guardada en este navegador; si tampoco hay copia, muestra la
+   pantalla de carga manual como último recurso. --- */
+function autoInit(){
+  Promise.all([
+    fetchTexto(URLS.oferta).catch(function(){ return null; }),
+    fetchTexto(URLS.maestro).catch(function(){ return null; }),
+    fetchTexto(URLS.mods).catch(function(){ return null; })
+  ]).then(function(res){
+    var ofertaTxt = res[0], maestroTxt = res[1], modsTxt = res[2];
+    var okOferta = false;
+
+    if (ofertaTxt){
+      try { DATOS = parseOferta(ofertaTxt); okOferta = true; guardarEnCache(CACHE.oferta, ofertaTxt); }
+      catch (ex){ DATOS = null; }
+    }
+    if (maestroTxt){
+      try { META = parseMaestro(maestroTxt).meta; guardarEnCache(CACHE.maestro, maestroTxt); }
+      catch (ex){ /* opcional: se ignora si falla */ }
+    }
+    if (modsTxt){
+      try { MODS = parseOferta(modsTxt); guardarEnCache(CACHE.mods, modsTxt); }
+      catch (ex){ /* opcional: se ignora si falla */ }
+    }
+
+    if (okOferta){
+      dbSet(CACHE.fecha, new Date().toISOString());
+      comprobarListo();
+      mostrarCalendarios();
+    } else {
+      $('cargandoMsg').textContent = 'No se ha podido conectar con Google Sheets. Buscando una copia guardada…';
+      cargarDesdeCache().then(function(){
+        if (DATOS){
+          mostrarCalendarios();
+        } else {
+          $('cargando').style.display = 'none';
+          $('manual').style.display = 'block';
+          marcar($('z1'), $('e1'), 'No se ha podido conectar con Google Sheets y no hay ninguna copia guardada. Carga el CSV a mano.', true);
+        }
+      });
+    }
+  });
+}
+
+/* --- Botón "Actualizar datos": vuelve a leer el Sheet sin recargar la
+   página, manteniendo la tienda que se estuviera consultando. --- */
+$('btnActualizar').addEventListener('click', function(){
+  var actual = $('sel').value;
+  $('estado').textContent = 'Actualizando…';
+  Promise.all([
+    fetchTexto(URLS.oferta).catch(function(){ return null; }),
+    fetchTexto(URLS.maestro).catch(function(){ return null; }),
+    fetchTexto(URLS.mods).catch(function(){ return null; })
+  ]).then(function(res){
+    var ofertaTxt = res[0], maestroTxt = res[1], modsTxt = res[2];
+    if (ofertaTxt){
+      try { DATOS = parseOferta(ofertaTxt); guardarEnCache(CACHE.oferta, ofertaTxt); }
+      catch (ex){ $('estado').textContent = 'Error al actualizar: ' + ex.message; return; }
+    } else {
+      $('estado').textContent = 'No se ha podido conectar con Google Sheets.';
+      return;
+    }
+    if (maestroTxt){
+      try { META = parseMaestro(maestroTxt).meta; guardarEnCache(CACHE.maestro, maestroTxt); } catch (ex){}
+    }
+    MODS = null;
+    if (modsTxt){
+      try { MODS = parseOferta(modsTxt); guardarEnCache(CACHE.mods, modsTxt); } catch (ex){}
+    }
+    dbSet(CACHE.fecha, new Date().toISOString());
+
+    aplicarMods();
+    LISTA = Object.keys(DATOS.stores).sort(function(a,b){
+      return a.localeCompare(b, 'es', { numeric: true });
+    });
+    $('lblSoloMod').style.display = Object.keys(MODIFICADAS).length ? 'flex' : 'none';
+    rellenarLista($('buscar').value);
+    if (actual && DATOS.stores[actual]) $('sel').value = actual;
+    pintar();
+  });
+});
+
+$('sel').addEventListener('change', pintar);
+$('soloMod').addEventListener('change', function(){
+  var vis = rellenarLista($('buscar').value);
+  if (vis.length) pintar();
+});
+$('buscar').addEventListener('input', function(){
+  var vis = rellenarLista(this.value);
+  if (vis.length) pintar();
+});
+$('buscar').addEventListener('keydown', function(e){
+  if (e.key === 'Enter'){ e.preventDefault(); $('sel').focus(); }
+});
+$('btnImp').addEventListener('click', function(){
+  var c = $('sel').value;
+  // El nombre del fichero que propone el navegador sale del titulo
+  var previo = document.title;
+  document.title = 'C-' + c + ' Planificación Anual Oferta ' +
+                   (DATOS.stores[c] ? DATOS.stores[c].anio : '') + ' - NTC';
+
+  var yaAvisado = false;
+  try { yaAvisado = !!localStorage.getItem('ntc.avisoImpresion'); } catch (e) {}
+  if (!yaAvisado){
+    alert('En la ventana que se abre:\n\n' +
+          '  · Destino: elige "Guardar como PDF"\n' +
+          '  · Orientación: horizontal\n' +
+          '  · Márgenes: ninguno\n' +
+          '  · Marca "Gráficos de fondo" para que salgan los colores\n\n' +
+          'Este aviso no volverá a aparecer.');
+    try { localStorage.setItem('ntc.avisoImpresion', '1'); } catch (e) {}
+  }
+
+  window.print();
+  setTimeout(function(){ document.title = previo; }, 1500);
+});
+$('btnOtro').addEventListener('click', function(){
+  $('doc').innerHTML = '';
+  $('bar').style.display = 'none';
+  $('inicio').style.display = 'block';
+  $('cargando').style.display = 'none';
+  $('manual').style.display = 'block';
+  cargarDesdeCache();
+});
+
+// Atajos: flechas para cambiar de tienda
+document.addEventListener('keydown', function(e){
+  if ($('bar').style.display === 'none') return;
+  if (document.activeElement === $('buscar')) return;
+  var sel = $('sel');
+  if (e.key === 'ArrowRight' && sel.selectedIndex < sel.options.length - 1){
+    sel.selectedIndex++; pintar();
+  } else if (e.key === 'ArrowLeft' && sel.selectedIndex > 0){
+    sel.selectedIndex--; pintar();
+  }
+});
+
+// Arranque: intenta leer el Sheet directamente
+autoInit();
+</script>
+</body>
+</html>
