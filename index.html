@@ -23,9 +23,8 @@
   .page:last-child { page-break-after: auto; break-after: auto; }
 
   @media screen {
-    #docWrap { width: 100%; display: flex; justify-content: center; }
     #doc { display: flex; flex-direction: column; align-items: flex-start;
-           width: max-content; gap: 18px; padding: 18px; transform-origin: top left; }
+           width: max-content; margin: 0 auto; gap: 18px; padding: 18px; }
     .page { box-shadow: 0 6px 24px rgba(0,0,0,.16); border-radius: 2px; }
   }
 
@@ -42,35 +41,23 @@
     font: 600 13px 'Barlow', sans-serif; padding: 6px 10px;
     border-radius: 6px; border: 1px solid #2E4636; background: #fff; color: #1f2937;
   }
-  #bar input { flex: 1 1 160px; min-width: 110px; max-width: 210px; }
-  #bar select { flex: 2 1 220px; min-width: 140px; max-width: 430px; }
+  #bar input { width: 210px; }
+  #bar select { max-width: 430px; }
   #bar button {
     font: 700 12px 'Archivo', sans-serif; letter-spacing: .3px; cursor: pointer;
     padding: 7px 14px; border-radius: 6px; border: 0;
-    background: #2F9E5B; color: #fff; white-space: nowrap;
+    background: #2F9E5B; color: #fff;
   }
   #bar button:hover { background: #268049; }
   #bar button.ghost { background: transparent; border: 1px solid #43604C; color: #CFE4D6; }
   #bar button.ghost:hover { background: #1D3326; }
   #estado { font: 500 11.5px 'Barlow', sans-serif; color: #9FBCA9; }
 
-  @media (max-width: 640px) {
-    #bar { gap: 8px; padding: 9px 10px; }
-    #bar > div:first-child { flex: 1 1 100%; }
-    #bar input, #bar select { flex: 1 1 100%; max-width: none; }
-  }
-
   /* ---------- Pantalla de carga ---------- */
   #inicio { max-width: 720px; margin: 44px auto; padding: 0 20px; }
   #inicio h1 { font: 800 26px 'Archivo', sans-serif; margin: 0 0 6px; color: #14261c; }
   #inicio p.lead { font: 400 14px 'Barlow', sans-serif; color: #5b6570;
                    line-height: 1.55; margin: 0 0 26px; }
-  @media (max-width: 480px) {
-    #inicio { margin: 24px auto; padding: 0 14px; }
-    #inicio h1 { font-size: 21px; }
-    .zona { padding: 16px 14px; }
-    .zona a.drive { margin: 8px 8px 0 0; }
-  }
   .zona {
     border: 2px dashed #B6C2BA; border-radius: 12px; background: #fff;
     padding: 20px 22px; margin-bottom: 14px; transition: border-color .15s, background .15s;
@@ -121,9 +108,8 @@
   @media print {
     html, body { background: #fff !important; }
     #bar, #inicio { display: none !important; }
-    #docWrap { height: auto !important; display: block !important; }
     #doc { display: block !important; padding: 0 !important; margin: 0 !important;
-           width: auto !important; gap: 0 !important; transform: none !important; }
+           width: auto !important; gap: 0 !important; }
     .page { box-shadow: none !important; border-radius: 0 !important;
             margin: 0 !important; }
   }
@@ -196,7 +182,7 @@
   <span id="estado"></span>
 </div>
 
-<div id="docWrap"><div id="doc"></div></div>
+<div id="doc"></div>
 
 <script>
 var FONTS = {
@@ -1029,38 +1015,7 @@ function pintar(){
   try { localStorage.setItem('ntc.ultimaTienda', c); } catch (e) {}
   document.documentElement.scrollTop = 0;
   document.body.scrollTop = 0;
-  ajustarEscalaPaginas();
 }
-
-/* --- Responsive: las páginas son A4 apaisado a tamaño fijo (pensadas
-   para imprimir). En pantallas estrechas (móvil/tablet) se reducen con
-   transform:scale para que se vean enteras sin desbordar; el usuario
-   puede seguir haciendo pinch-zoom para leer el detalle. Se usa
-   transform en vez de "zoom" porque zoom rompe el diseño de rejilla de
-   los días en Safari/iOS (la leyenda se monta encima del calendario).
-   Al imprimir se restaura a tamaño real (@media print + before/afterprint). --- */
-function ajustarEscalaPaginas(){
-  var doc = $('doc'), wrap = $('docWrap');
-  if (!doc || !wrap) return;
-  doc.style.transform = 'none';
-  var pagina = doc.querySelector('.page');
-  if (!pagina){ wrap.style.height = ''; return; }
-  var anchoNatural = doc.scrollWidth;
-  var altoNatural = doc.scrollHeight;
-  var disponible = window.innerWidth - 16;
-  var escala = Math.min(1, disponible / anchoNatural);
-  if (escala < 1){
-    doc.style.transform = 'scale(' + escala + ')';
-    wrap.style.height = Math.ceil(altoNatural * escala) + 'px';
-  } else {
-    doc.style.transform = '';
-    wrap.style.height = '';
-  }
-}
-window.addEventListener('resize', ajustarEscalaPaginas);
-window.addEventListener('orientationchange', function(){ setTimeout(ajustarEscalaPaginas, 50); });
-window.addEventListener('beforeprint', function(){ var d = $('doc'); if (d) d.style.transform = 'none'; });
-window.addEventListener('afterprint', ajustarEscalaPaginas);
 
 function mostrarCalendarios(){
   aplicarMods();
