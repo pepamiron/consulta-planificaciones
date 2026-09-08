@@ -2102,6 +2102,9 @@ function ntcGetMasterKey(forcePrompt){
     key = prompt('Introduce tu Master Key de JSONBin (solo se guarda en este navegador, nunca en el archivo):', key || '');
     if (key) { try { localStorage.setItem(NTC_KEY_STORAGE, key); } catch (e) {} }
   }
+  if (key) {
+    console.log('[NTC] Usando bin', NTC_HIST_BIN_ID, '— clave', key.slice(0,7) + '…' + key.slice(-4), '(longitud ' + key.length + ')');
+  }
   return key;
 }
 
@@ -2151,13 +2154,13 @@ async function ntcFetchHistorial(){
     var res = await fetch('https://api.jsonbin.io/v3/b/' + NTC_HIST_BIN_ID + '/latest', {
       headers: { 'X-Master-Key': key }
     });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    var data = await res.json();
-    var record = (data && data.record) || {};
+    var body = await res.json().catch(function(){ return null; });
+    if (!res.ok) throw new Error('HTTP ' + res.status + (body && body.message ? ' — ' + body.message : ''));
+    var record = (body && body.record) || {};
     if (record.filas_gz) return ntcDescomprimirFilas(record.filas_gz);
-    return record.filas || []; // formato antiguo sin comprimir, o bin recién creado vacío
+    return record.filas || [];
   } catch (e) {
-    console.warn('No se pudo leer el histórico de oferta:', e.message);
+    console.warn('No se pudo leer el histórico de oferta (bin ' + NTC_HIST_BIN_ID + '):', e.message);
     return null;
   }
 }
@@ -2171,7 +2174,8 @@ async function ntcGuardarHistorial(filas){
       headers: { 'Content-Type': 'application/json', 'X-Master-Key': key },
       body: JSON.stringify({ filas_gz: ntcComprimirFilas(filas), guardadoEl: new Date().toISOString() })
     });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    var body = await res.json().catch(function(){ return null; });
+    if (!res.ok) throw new Error('HTTP ' + res.status + (body && body.message ? ' — ' + body.message : '') + ' (bin: ' + NTC_HIST_BIN_ID + ')');
   } catch (e) {
     alert('Error guardando el histórico de oferta: ' + e.message);
   }
