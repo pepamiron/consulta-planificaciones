@@ -217,9 +217,9 @@
 
 
 .ntc-tabs { display:flex; align-items:center; gap:8px; padding:14px 20px; position:sticky; top:0; z-index:100; background:#fafafa; box-shadow:0 2px 6px rgba(0,0,0,0.08); }
+.ntc-tabs button.active { background:#fff; color:#111; }
 .ntc-tabs button { padding:9px 16px; border-radius:8px 8px 0 0; border:1px solid #d8d8d8; border-bottom:none;
   background:#eee; cursor:pointer; font:600 13px 'Barlow',Arial,sans-serif; color:#555; }
-.ntc-tabs button.active { background:#fff; color:#111; }
 #panel-oferta, #panel-cal { padding:0 0 24px; }
 
 </style>
@@ -230,7 +230,7 @@
   <button id="tab-btn-oferta" class="active">1. Oferta y coeficientes</button>
   <button id="tab-btn-cal">2. Calendarios por tienda</button>
   <span style="flex:1;"></span>
-  <button id="btn-ver-calendarios" style="border-radius:8px;background:#2F9E5B;color:#fff;border:none;font-weight:700;">Calcular oferta</button>
+  <button id="btn-ver-calendarios" style="border-radius:8px;background:#2F9E5B;color:#fff;border:none;font-weight:700;padding:9px 16px;">Calcular oferta</button>
 </div>
 
 <div id="panel-oferta">
@@ -327,72 +327,61 @@
   </div>
 </div>
 
-
-
 </div>
 
 <div id="panel-cal" style="display:none;">
 
-
 <div id="inicio">
-  <div class="sub" style="font:700 10px 'Archivo',sans-serif;letter-spacing:1.4px;color:#2F9E5B;text-transform:uppercase;margin-bottom:7px;">Dpto. Tiendas, RRHH y RREE &middot; Divprofi</div>
-  <h1>Consulta de Planificación Anual NTC</h1>
-
-  <div id="cargando">
-    <div class="spinner"></div>
-    <p id="cargandoMsg">Cargando datos desde Google Sheets…</p>
-    <p style="margin-top:18px;"><a href="#" id="verManual">¿Prefieres cargar los ficheros a mano?</a></p>
-  </div>
-
-  <div id="manual" style="display:none;">
-    <p class="lead">Carga el CSV de la oferta y podrás consultar el calendario de cualquier tienda en pantalla, o guardarlo en PDF. El maestro de tiendas y las modificaciones son opcionales. Los datos no salen de este equipo: todo se procesa en el navegador.</p>
-
-    <div class="zona" id="z1">
-      <h3>1. Oferta del año</h3>
-      <p class="hint">El CSV con la oferta de todas las tiendas. Arrastra el archivo aquí o púlsalo para buscarlo.</p>
-      <label class="file">Elegir archivo<input type="file" id="f1" accept=".csv,text/csv"></label>
-      <a class="drive" href="https://docs.google.com/spreadsheets/d/16-h2Cs0L7eOu5WBPS02-dVW42-O_6YQVBNMa9_0rh5A/export?format=csv&gid=0" download>Descargar CSV</a>
-      <a class="drive" href="https://docs.google.com/spreadsheets/d/16-h2Cs0L7eOu5WBPS02-dVW42-O_6YQVBNMa9_0rh5A/edit?gid=0#gid=0" target="_blank" rel="noopener">Abrir en Drive</a>
-      <div class="estado" id="e1"></div>
-    </div>
-
-    <div class="zona" id="z2">
-      <h3>2. Maestro de tiendas <span style="font-weight:400;color:#8A949C;">(opcional)</span></h3>
-      <p class="hint">Da la denominación, población, provincia y zona de la cabecera. Si no lo cargas, esos datos saldrán con un guion.</p>
-      <label class="file">Elegir archivo<input type="file" id="f2" accept=".csv,text/csv"></label>
-      <a class="drive" href="https://docs.google.com/spreadsheets/d/16-h2Cs0L7eOu5WBPS02-dVW42-O_6YQVBNMa9_0rh5A/export?format=csv&gid=1033958494" download>Descargar CSV</a>
-      <div class="estado" id="e2"></div>
-    </div>
+<div class="sub" style="font:700 10px 'Archivo',sans-serif;letter-spacing:1.4px;color:#2F9E5B;text-transform:uppercase;margin-bottom:7px;">Dpto. Tiendas, RRHH y RREE · Divprofi</div>
+<h1>Consulta de Planificación Anual NTC</h1>
+<div id="cargando">
+<div class="spinner"></div>
+<p id="cargandoMsg">Cargando datos desde Google Sheets…</p>
+<p style="margin-top:18px;"><a href="#" id="verManual">¿Prefieres cargar los ficheros a mano?</a></p>
+</div>
+<div id="manual" style="display:none;">
+<p class="lead">Carga el CSV de la oferta y podrás consultar el calendario de cualquier tienda en pantalla, o guardarlo en PDF. El maestro de tiendas y las modificaciones son opcionales. Los datos no salen de este equipo: todo se procesa en el navegador.</p>
+<div class="zona" id="z1">
+<h3>1. Oferta del año</h3>
+<p class="hint">El CSV con la oferta de todas las tiendas. Arrastra el archivo aquí o púlsalo para buscarlo.</p>
+<label class="file">Elegir archivo<input accept=".csv,text/csv" id="f1" type="file"/></label>
+<a class="drive" download="" href="https://docs.google.com/spreadsheets/d/16-h2Cs0L7eOu5WBPS02-dVW42-O_6YQVBNMa9_0rh5A/export?format=csv&amp;gid=0">Descargar CSV</a>
+<a class="drive" href="https://docs.google.com/spreadsheets/d/16-h2Cs0L7eOu5WBPS02-dVW42-O_6YQVBNMa9_0rh5A/edit?gid=0#gid=0" rel="noopener" target="_blank">Abrir en Drive</a>
+<div class="estado" id="e1"></div>
+</div>
+<div class="zona" id="z2">
+<h3>2. Maestro de tiendas <span style="font-weight:400;color:#8A949C;">(opcional)</span></h3>
+<p class="hint">Da la denominación, población, provincia y zona de la cabecera. Si no lo cargas, esos datos saldrán con un guion.</p>
+<label class="file">Elegir archivo<input accept=".csv,text/csv" id="f2" type="file"/></label>
+<a class="drive" download="" href="https://docs.google.com/spreadsheets/d/16-h2Cs0L7eOu5WBPS02-dVW42-O_6YQVBNMa9_0rh5A/export?format=csv&amp;gid=1033958494">Descargar CSV</a>
+<div class="estado" id="e2"></div>
 </div>
 
-    <button id="btnVer" disabled>Ver calendarios</button>
-    <p id="aviso">Los ficheros deben estar guardados en <b>CSV UTF-8 (delimitado por comas)</b>. Si los acentos salen mal, vuelve a guardarlos desde Excel con ese formato.</p>
-    <p id="borrarCacheWrap" style="display:none;font:400 11.5px 'Barlow',sans-serif;color:#8A949C;margin-top:8px;">
+<button disabled="" id="btnVer">Ver calendarios</button>
+<p id="aviso">Los ficheros deben estar guardados en <b>CSV UTF-8 (delimitado por comas)</b>. Si los acentos salen mal, vuelve a guardarlos desde Excel con ese formato.</p>
+<p id="borrarCacheWrap" style="display:none;font:400 11.5px 'Barlow',sans-serif;color:#8A949C;margin-top:8px;">
       Los datos se guardan en este navegador para que no tengas que volver a cargarlos.
       <a href="#" id="borrarCache" style="color:#B4443F;text-decoration:underline;">Borrar los datos guardados</a>
-    </p>
-  </div>
+</p>
 </div>
-
+</div>
 <div id="bar" style="display:none;">
-  <div>
-    <div class="sub">Planificación Anual NTC</div>
-    <div class="brand" id="tituloAnio">Consulta por tienda</div>
-  </div>
-  <input type="search" id="buscar" placeholder="Buscar centro o población…" autocomplete="off">
-  <select id="sel"></select>
-  <button id="btnImp">Guardar en PDF / Imprimir</button>
-  <label id="lblSoloMod" style="display:none;align-items:center;gap:6px;font:600 11.5px 'Barlow',sans-serif;color:#CFE4D6;cursor:pointer;">
-    <input type="checkbox" id="soloMod" style="width:auto;margin:0;cursor:pointer;"> Solo modificadas
-  </label>
-  <button class="ghost" id="btnActualizar">Actualizar datos</button>
-  <button class="ghost" id="btnOtro">Cargar otros ficheros</button>
-  <span id="fuenteDatos" style="font:600 11px 'Barlow',sans-serif;"></span>
-  <span id="estado"></span>
+<div>
+<div class="sub">Planificación Anual NTC</div>
+<div class="brand" id="tituloAnio">Consulta por tienda</div>
 </div>
-
+<input autocomplete="off" id="buscar" placeholder="Buscar centro o población…" type="search"/>
+<select id="sel"></select>
+<button id="btnImp">Guardar en PDF / Imprimir</button>
+<label id="lblSoloMod" style="display:none;align-items:center;gap:6px;font:600 11.5px 'Barlow',sans-serif;color:#CFE4D6;cursor:pointer;">
+<input id="soloMod" style="width:auto;margin:0;cursor:pointer;" type="checkbox"/> Solo modificadas
+  </label>
+<button class="ghost" id="btnActualizar">Actualizar datos</button>
+<button class="ghost" id="btnOtro">Cargar otros ficheros</button>
+<span id="fuenteDatos" style="font:600 11px 'Barlow',sans-serif;"></span>
+<span id="estado"></span>
+</div>
 <div id="doc"></div>
-
 
 </div>
 
@@ -2071,12 +2060,9 @@ function ntcShowTab(name){
 document.getElementById('tab-btn-oferta').addEventListener('click', function(){ ntcShowTab('oferta'); });
 document.getElementById('tab-btn-cal').addEventListener('click', function(){ ntcShowTab('cal'); });
 
-// En esta prueba el calendario no lee Sheets directamente: saltamos el spinner
-// de "cargando" y mostramos ya el bloque normal (que recibe los datos del módulo 1).
 document.getElementById('cargando').style.display = 'none';
 document.getElementById('manual').style.display = 'block';
 
-// --- Maestro de tiendas, publicado en la web como CSV ---
 var NTC_MAESTRO_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQpfV_priRpFanTSYLZR1_OHxAVl9lzrd01WluyvCuXmRRF8_KsBB9pIdPyYsb_Hg6FVQXMaHuiGEKe/pub?gid=1033958494&single=true&output=csv';
 
 async function ntcCargarMaestro(){
@@ -2090,9 +2076,8 @@ async function ntcCargarMaestro(){
   }
 }
 
-// --- Histórico compartido de la oferta, para detectar modificaciones ---
 var NTC_HIST_BIN_ID = '6aa00fb0ac6210605ab3b3dd';
-var NTC_KEY_STORAGE = 'ntc_coef_jsonbin_masterkey'; // misma Master Key que ya usas para coeficientes
+var NTC_KEY_STORAGE = 'ntc_coef_jsonbin_masterkey';
 
 function ntcGetMasterKey(forcePrompt){
   var key = null;
@@ -2116,16 +2101,12 @@ function ntcHash(str){
   return h.toString(16);
 }
 
-// De 'dd/mm/aaaa' saca una clave ordenable 'aaaammdd'
 function ntcFechaOrdenable(f){
   var p = (f || '').split('/');
   if (p.length !== 3) return f || '';
   return p[2] + ('0' + p[1]).slice(-2) + ('0' + p[0]).slice(-2);
 }
 
-// Una huella corta por tienda: resume todos sus días (pedidos + vehículos).
-// Si cualquier día cambia, la huella de la tienda cambia. Así el histórico
-// guarda ~1 entrada por tienda en vez de una por tienda y día.
 function ntcFirmarPorCentro(filas){
   var porCentro = {};
   filas.forEach(function(f){
@@ -2154,16 +2135,13 @@ function ntcCalcularModificaciones(firmasActuales, firmasAnteriores){
 }
 
 async function ntcFetchHistorial(){
-  var key = ntcGetMasterKey(false);
-  if (!key) return {};
   try {
     var res = await fetch('https://api.jsonbin.io/v3/b/' + NTC_HIST_BIN_ID + '/latest', {
-      headers: { 'X-Master-Key': key }
+      headers: { 'X-Bin-Meta': 'false' }
     });
     var body = await res.json().catch(function(){ return null; });
     if (!res.ok) throw new Error('HTTP ' + res.status + (body && body.message ? ' — ' + body.message : ''));
-    var record = (body && body.record) || {};
-    return record.firmas || {};
+    return (body && body.firmas) || {};
   } catch (e) {
     console.warn('No se pudo leer el histórico de oferta (bin ' + NTC_HIST_BIN_ID + '):', e.message);
     return null;
@@ -2199,7 +2177,7 @@ document.getElementById('btn-ver-calendarios').addEventListener('click', async f
   var firmasActuales = ntcFirmarPorCentro(filas);
   var firmasAnteriores = await ntcFetchHistorial();
   if (firmasAnteriores === null){
-    if (!confirm('No se ha podido comprobar el histórico de cambios (¿Master Key correcta?). ¿Continuar sin detectar modificaciones?')) return;
+    if (!confirm('No se ha podido comprobar el histórico de cambios. ¿Continuar sin detectar modificaciones?')) return;
     firmasAnteriores = {};
   }
   var modificadas = ntcCalcularModificaciones(firmasActuales, firmasAnteriores);
