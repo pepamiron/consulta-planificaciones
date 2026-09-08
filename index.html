@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <title>PRUEBA · Oferta + Coeficientes + Calendarios</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
 <style>
 
   :root{
@@ -2108,48 +2107,55 @@ function ntcGetMasterKey(forcePrompt){
   return key;
 }
 
-function ntcClaveFila(f){ return f.centro + '|' + f.fecha; }
+function ntcHash(str){
+  var h = 0x811c9dc5;
+  for (var i = 0; i < str.length; i++){
+    h ^= str.charCodeAt(i);
+    h = (h * 0x01000193) >>> 0;
+  }
+  return h.toString(16);
+}
 
-function ntcCalcularModificaciones(actuales, anteriores){
-  var mapAnterior = {};
-  var centrosAnteriores = {};
-  (anteriores || []).forEach(function(f){
-    mapAnterior[ntcClaveFila(f)] = f;
-    centrosAnteriores[f.centro] = true;
+// De 'dd/mm/aaaa' saca una clave ordenable 'aaaammdd'
+function ntcFechaOrdenable(f){
+  var p = (f || '').split('/');
+  if (p.length !== 3) return f || '';
+  return p[2] + ('0' + p[1]).slice(-2) + ('0' + p[0]).slice(-2);
+}
+
+// Una huella corta por tienda: resume todos sus días (pedidos + vehículos).
+// Si cualquier día cambia, la huella de la tienda cambia. Así el histórico
+// guarda ~1 entrada por tienda en vez de una por tienda y día.
+function ntcFirmarPorCentro(filas){
+  var porCentro = {};
+  filas.forEach(function(f){
+    (porCentro[f.centro] = porCentro[f.centro] || []).push(f);
   });
+  var firmas = {};
+  Object.keys(porCentro).forEach(function(centro){
+    var ordenadas = porCentro[centro].slice().sort(function(a, b){
+      return ntcFechaOrdenable(a.fecha) < ntcFechaOrdenable(b.fecha) ? -1 : 1;
+    });
+    var texto = ordenadas.map(function(f){
+      return f.fecha + '|' + f.pedidosTM + '|' + f.pedidosTT + '|' + f.vehiculosTM + '|' + f.vehiculosTT;
+    }).join(';');
+    firmas[centro] = ntcHash(texto);
+  });
+  return firmas;
+}
+
+function ntcCalcularModificaciones(firmasActuales, firmasAnteriores){
   var resultado = {};
-  actuales.forEach(function(f){
-    if (!centrosAnteriores[f.centro]){
-      resultado[f.centro] = 'nueva';
-      return;
-    }
-    if (resultado[f.centro]) return;
-    var prev = mapAnterior[ntcClaveFila(f)];
-    if (!prev ||
-        prev.pedidosTM !== f.pedidosTM || prev.pedidosTT !== f.pedidosTT ||
-        prev.vehiculosTM !== f.vehiculosTM || prev.vehiculosTT !== f.vehiculosTT){
-      resultado[f.centro] = 'modificada';
-    }
+  Object.keys(firmasActuales).forEach(function(centro){
+    if (!(centro in firmasAnteriores)) { resultado[centro] = 'nueva'; return; }
+    if (firmasAnteriores[centro] !== firmasActuales[centro]) { resultado[centro] = 'modificada'; }
   });
   return resultado;
 }
 
-function ntcComprimirFilas(filas){
-  var bytes = pako.deflate(JSON.stringify(filas));
-  var binary = '';
-  bytes.forEach(function(b){ binary += String.fromCharCode(b); });
-  return btoa(binary);
-}
-function ntcDescomprimirFilas(b64){
-  var binary = atob(b64);
-  var bytes = new Uint8Array(binary.length);
-  for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return JSON.parse(pako.inflate(bytes, { to: 'string' }));
-}
-
 async function ntcFetchHistorial(){
   var key = ntcGetMasterKey(false);
-  if (!key) return [];
+  if (!key) return {};
   try {
     var res = await fetch('https://api.jsonbin.io/v3/b/' + NTC_HIST_BIN_ID + '/latest', {
       headers: { 'X-Master-Key': key }
@@ -2157,22 +2163,21 @@ async function ntcFetchHistorial(){
     var body = await res.json().catch(function(){ return null; });
     if (!res.ok) throw new Error('HTTP ' + res.status + (body && body.message ? ' — ' + body.message : ''));
     var record = (body && body.record) || {};
-    if (record.filas_gz) return ntcDescomprimirFilas(record.filas_gz);
-    return record.filas || [];
+    return record.firmas || {};
   } catch (e) {
     console.warn('No se pudo leer el histórico de oferta (bin ' + NTC_HIST_BIN_ID + '):', e.message);
     return null;
   }
 }
 
-async function ntcGuardarHistorial(filas){
+async function ntcGuardarHistorial(firmas){
   var key = ntcGetMasterKey(false);
   if (!key) { alert('Sin Master Key: no se ha guardado el histórico de esta oferta.'); return; }
   try {
     var res = await fetch('https://api.jsonbin.io/v3/b/' + NTC_HIST_BIN_ID, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'X-Master-Key': key },
-      body: JSON.stringify({ filas_gz: ntcComprimirFilas(filas), guardadoEl: new Date().toISOString() })
+      body: JSON.stringify({ firmas: firmas, guardadoEl: new Date().toISOString() })
     });
     var body = await res.json().catch(function(){ return null; });
     if (!res.ok) throw new Error('HTTP ' + res.status + (body && body.message ? ' — ' + body.message : '') + ' (bin: ' + NTC_HIST_BIN_ID + ')');
@@ -2191,12 +2196,13 @@ document.getElementById('btn-ver-calendarios').addEventListener('click', async f
     return;
   }
 
-  var anteriores = await ntcFetchHistorial();
-  if (anteriores === null){
+  var firmasActuales = ntcFirmarPorCentro(filas);
+  var firmasAnteriores = await ntcFetchHistorial();
+  if (firmasAnteriores === null){
     if (!confirm('No se ha podido comprobar el histórico de cambios (¿Master Key correcta?). ¿Continuar sin detectar modificaciones?')) return;
-    anteriores = [];
+    firmasAnteriores = {};
   }
-  var modificadas = ntcCalcularModificaciones(filas, anteriores);
+  var modificadas = ntcCalcularModificaciones(firmasActuales, firmasAnteriores);
   window.NTC_setModificadas(modificadas);
 
   await ntcCargarMaestro();
@@ -2206,7 +2212,7 @@ document.getElementById('btn-ver-calendarios').addEventListener('click', async f
   document.getElementById('btn-ver-calendarios').textContent = 'Oferta calculada ✓ — pulsa "2. Calendarios por tienda" para verla';
 
   if (confirm('¿Guardar esta oferta como referencia para detectar cambios la próxima vez? (sustituye la anterior)')){
-    ntcGuardarHistorial(filas);
+    ntcGuardarHistorial(firmasActuales);
   }
 });
 </script>
