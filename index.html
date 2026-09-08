@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>PRUEBA · Oferta + Coeficientes + Calendarios</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
 <style>
 
   :root{
@@ -216,7 +217,7 @@
   }
 
 
-.ntc-tabs { display:flex; gap:8px; padding:14px 20px 0; }
+.ntc-tabs { display:flex; align-items:center; gap:8px; padding:14px 20px; position:sticky; top:0; z-index:100; background:#fafafa; box-shadow:0 2px 6px rgba(0,0,0,0.08); }
 .ntc-tabs button { padding:9px 16px; border-radius:8px 8px 0 0; border:1px solid #d8d8d8; border-bottom:none;
   background:#eee; cursor:pointer; font:600 13px 'Barlow',Arial,sans-serif; color:#555; }
 .ntc-tabs button.active { background:#fff; color:#111; }
@@ -229,6 +230,8 @@
 <div class="ntc-tabs">
   <button id="tab-btn-oferta" class="active">1. Oferta y coeficientes</button>
   <button id="tab-btn-cal">2. Calendarios por tienda</button>
+  <span style="flex:1;"></span>
+  <button id="btn-ver-calendarios" style="border-radius:8px;background:#2F9E5B;color:#fff;border:none;font-weight:700;">Calcular oferta</button>
 </div>
 
 <div id="panel-oferta">
@@ -325,9 +328,8 @@
   </div>
 </div>
 
-  <div class="toolbar" style="margin:16px 20px;">
-    <button id="btn-ver-calendarios">Calcular oferta</button>
-  </div>
+
+
 </div>
 
 <div id="panel-cal" style="display:none;">
@@ -2129,6 +2131,19 @@ function ntcCalcularModificaciones(actuales, anteriores){
   return resultado;
 }
 
+function ntcComprimirFilas(filas){
+  var bytes = pako.deflate(JSON.stringify(filas));
+  var binary = '';
+  bytes.forEach(function(b){ binary += String.fromCharCode(b); });
+  return btoa(binary);
+}
+function ntcDescomprimirFilas(b64){
+  var binary = atob(b64);
+  var bytes = new Uint8Array(binary.length);
+  for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return JSON.parse(pako.inflate(bytes, { to: 'string' }));
+}
+
 async function ntcFetchHistorial(){
   var key = ntcGetMasterKey(false);
   if (!key) return [];
@@ -2138,7 +2153,9 @@ async function ntcFetchHistorial(){
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     var data = await res.json();
-    return (data && data.record && data.record.filas) || [];
+    var record = (data && data.record) || {};
+    if (record.filas_gz) return ntcDescomprimirFilas(record.filas_gz);
+    return record.filas || []; // formato antiguo sin comprimir, o bin recién creado vacío
   } catch (e) {
     console.warn('No se pudo leer el histórico de oferta:', e.message);
     return null;
@@ -2152,7 +2169,7 @@ async function ntcGuardarHistorial(filas){
     var res = await fetch('https://api.jsonbin.io/v3/b/' + NTC_HIST_BIN_ID, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'X-Master-Key': key },
-      body: JSON.stringify({ filas: filas, guardadoEl: new Date().toISOString() })
+      body: JSON.stringify({ filas_gz: ntcComprimirFilas(filas), guardadoEl: new Date().toISOString() })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
   } catch (e) {
@@ -2161,10 +2178,12 @@ async function ntcGuardarHistorial(filas){
 }
 
 document.getElementById('btn-ver-calendarios').addEventListener('click', async function(){
+  this.textContent = 'Calculando…';
   var csv = window.NTC_getOfertaCSV && window.NTC_getOfertaCSV();
   var filas = window.NTC_getOfertaFilas && window.NTC_getOfertaFilas();
   if (!csv || !filas) {
     alert('Antes calcula la oferta: carga el informe y ten cargados los coeficientes.');
+    this.textContent = 'Calcular oferta';
     return;
   }
 
@@ -2180,7 +2199,7 @@ document.getElementById('btn-ver-calendarios').addEventListener('click', async f
 
   var ok = window.NTC_cargarOfertaDesdeCSV(csv);
   if (!ok) return;
-  ntcShowTab('cal');
+  document.getElementById('btn-ver-calendarios').textContent = 'Oferta calculada ✓ — pulsa "2. Calendarios por tienda" para verla';
 
   if (confirm('¿Guardar esta oferta como referencia para detectar cambios la próxima vez? (sustituye la anterior)')){
     ntcGuardarHistorial(filas);
