@@ -14,7 +14,7 @@
   body { background: #e9ecef; color: #1f2937; font-family: 'Barlow', system-ui, sans-serif; }
 
   /* ---------- Geometria de impresion: A4 apaisado ---------- */
-  @page { size: A4 landscape; margin: 0; }
+  @page { size: 297mm 210mm; margin: 0; }
   .page {
     width: 297mm; height: 210mm; padding: 4mm 9mm; background: #fff;
     display: flex; flex-direction: column; overflow: hidden;
@@ -1155,7 +1155,7 @@ $('btnImp').addEventListener('click', function(){
   if (!yaAvisado){
     alert('En la ventana que se abre:\n\n' +
           '  · Destino: elige "Guardar como PDF"\n' +
-          '  · Orientación: horizontal\n' +
+          '  · Orientación: déjala como esté (no la toques, la página ya viene fija en horizontal)\n' +
           '  · Márgenes: ninguno\n' +
           '  · Marca "Gráficos de fondo" para que salgan los colores\n\n' +
           'Este aviso no volverá a aparecer.');
